@@ -8,3 +8,11 @@ export const userLogin = async (username, password) => {
             return res;
         });
 };
+export const userRegister = async (username,password) => {
+    return axios.post(`${API_MODULE}/register`, {username: username, password: password},
+        {headers: {'Content-Type': 'application/json'}})
+        .then(res => {
+            console.log(res)
+            return res;
+        });
+};

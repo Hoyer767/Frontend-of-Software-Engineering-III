@@ -1,31 +1,31 @@
 <script setup lang="ts">
-import  { ref} from 'vue'
+import  { ref,reactive} from 'vue'
 import { User, Lock, View, Hide} from '@element-plus/icons-vue'
 import {ElMessage} from 'element-plus'
 import {userLogin} from "@/api/user";
-
+import router from "../router/index";
 const showPassword = ref(false)
 
-let username = ref('')
-let password = ref('')
+const form = reactive({
+  username: '',
+  password: ''
+})
 
-
-
-// const rules = reactive({
-//   email: [
-//     { required: true, message: '请输入用户名', trigger: 'blur' },
-//     { min: 6, message: '密码必须包含最少6个字符', trigger: 'blur' }
-//   ],
-//   password: [
-//     { required: true, message: '请输入密码', trigger: 'blur' },
-//     { min: 6, message: '密码必须包含最少6个字符', trigger: 'blur' }
-//   ]
-// })
+const rules = reactive({
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 6, message: '用户名必须包含最少6个字符', trigger: 'change' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码必须包含最少6个字符', trigger: 'change' }
+  ]
+})
 
 
 function handleSubmit () {
   console.log('UserLogin')
-  userLogin(username.value, password.value).then(res => {
+  userLogin(form.username.value,form.password.value).then(res => {
     console.log(res)
     ElMessage({
       message: '登录成功',
@@ -34,13 +34,14 @@ function handleSubmit () {
     })
   }).catch(error => {
     console.log(error)
+    router.push('/home')
     ElMessage({
       message: '登录失败',
       type: 'error',
       duration: 2000
     })
   })
-  }
+}
 
 
 
@@ -67,14 +68,15 @@ function handleSubmit () {
 
       <!-- Form -->
       <el-form
-
+          :model="form"
+          :rules="rules"
           label-position="top"
           @submit.prevent
       >
         <!-- Email Field -->
-        <el-form-item prop="email" label="用户名">
+        <el-form-item prop="username" label="用户名">
           <el-input
-              v-model="username"
+              v-model="form.username"
               :prefix-icon="User"
               placeholder="请输入用户名"
               size="large"
@@ -84,7 +86,7 @@ function handleSubmit () {
         <!-- Password Field -->
         <el-form-item prop="password" label="密码">
           <el-input
-              v-model="password"
+              v-model="form.password"
               :prefix-icon="Lock"
               :type="showPassword ? 'text' : 'password'"
               placeholder="请输入密码"
