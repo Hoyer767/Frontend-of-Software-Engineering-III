@@ -3,10 +3,9 @@
 
 <template>
   <el-container class="container " direction="vertical">
-    <router-view></router-view>
+    <RouterView/>
   </el-container>
 </template>
-
 <style scoped>
 .container{
   width: 100%;
