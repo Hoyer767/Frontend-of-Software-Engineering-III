@@ -62,21 +62,20 @@ const rules = reactive<FormRules>({
 
 
 function handleSubmit () {
-  console.log('UserLogin')
-  userRegister(form.username.value,form.password.value).then(res => {
-    console.log(res)
+  userRegister(form.username, form.password).then(res => {
+    if (res.data.code === '000') {
+      ElMessage({
+        message: "注册成功！请登录账号",
+        type: 'success',
+        center: true,
+      })
+      router.push({path: "/login"})
+    }
+  }).catch(err => {
     ElMessage({
-      message: '登录成功',
-      type: 'success',
-      duration: 2000
-    })
-  }).catch(error => {
-    console.log(error)
-    router.push('/home')
-    ElMessage({
-      message: '登录失败',
+      message: "注册失败",
       type: 'error',
-      duration: 2000
+      center: true,
     })
   })
 }

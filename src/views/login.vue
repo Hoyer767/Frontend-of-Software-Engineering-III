@@ -14,7 +14,7 @@ const form = reactive({
 const rules = reactive({
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 6, message: '用户名必须包含最少6个字符', trigger: 'change' }
+    { min: 3, message: '用户名必须包含最少3个字符', trigger: 'change' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -24,25 +24,29 @@ const rules = reactive({
 
 
 function handleSubmit () {
-  console.log('UserLogin')
-  userLogin(form.username.value,form.password.value).then(res => {
-    console.log(res)
+  userLogin(form.username, form.password).then(res => {
+    if (res.data.code === '000') {
+      ElMessage({
+        message: "登录成功",
+        type: 'success',
+        center: true,
+      });
+      router.push({path: "/home"});
+    }else {
+      ElMessage({
+        message: "用户名或密码错误",
+        type: 'error',
+        center: true,
+      });
+    }
+  }).catch(err => {
     ElMessage({
-      message: '登录成功',
-      type: 'success',
-      duration: 2000
-    })
-  }).catch(error => {
-    console.log(error)
-    router.push('/home')
-    ElMessage({
-      message: '登录失败',
+      message: "登录请求失败，请稍后重试",
       type: 'error',
-      duration: 2000
-    })
+      center: true,
+    });
   })
 }
-
 
 
 </script>
