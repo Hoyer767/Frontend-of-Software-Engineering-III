@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import {Delete} from "@element-plus/icons-vue";
+
+const props = defineProps<{
+  name: string;
+  type: string;
+}>();
 
 const url = computed(() => {
   const randomNum = Math.floor(Math.random() * 7) + 1;
-  return `src/assets/TaskItemPic/pic${randomNum}.jpg`;
+  return `/images/pic${randomNum}.jpg`;
 });
 
 const rotation = ref(0);
@@ -24,14 +30,14 @@ onMounted(() => {
       <div class="status-tag" :class="`status-completed`">
         completed
       </div>
-      <el-text class="title"> Yummy hamburger </el-text>
-      <img
+      <el-text class="title"> {{ props.name }} </el-text>
+      <el-image
           :src="url"
           style="width: 100%"
           class="pic"
       />
-      <el-text class="classification"> Rag评估 </el-text>
-      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;"/>
+      <el-text class="classification"> {{ props.type }}评估 </el-text>
+<!--      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;"/>-->
     </el-card>
   </div>
 </template>

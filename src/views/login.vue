@@ -31,6 +31,7 @@ function handleSubmit () {
         type: 'success',
         center: true,
       });
+      sessionStorage.setItem("username", res.data.result.username)
       router.push({path: "/home"});
     }else {
       ElMessage({
