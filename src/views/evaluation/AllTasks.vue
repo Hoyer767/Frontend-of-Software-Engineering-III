@@ -15,6 +15,7 @@ const { getTasks } = storeToRefs(store)
         :key="item.id"
         :name="item.name"
         :type="item.type"
+        :id="item.id"
     />
   </div>
 </template>

@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import {Delete} from "@icon-park/vue-next";
+import {ElMessage} from "element-plus";
+import {useTaskStore} from "@/store/TaskStore";
+import {deleteRagTaskById} from "@/api/rag"
+
+const store = useTaskStore()
+const { fetchTasks } = store
 
 const props = defineProps<{
   name: string;
   type: string;
+  id: string
 }>();
 
 const url = computed(() => {
@@ -13,6 +20,18 @@ const url = computed(() => {
 });
 
 const rotation = ref(0);
+
+const del = async () => {
+  if (props.type === 'Rag') {
+    try {
+      await deleteRagTaskById(props.id)
+      ElMessage.success("删除 Rag 任务成功！")
+      await fetchTasks()
+    } catch (error) {
+      ElMessage.error('删除 Rag 任务失败')
+    }
+  }
+}
 
 onMounted(() => {
   rotation.value = Math.floor(Math.random() * 11) - 5;
@@ -37,7 +56,7 @@ onMounted(() => {
           class="pic"
       />
       <el-text class="classification"> {{ props.type }}评估 </el-text>
-      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;"/>
+      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;" @click="del"/>
     </el-card>
   </div>
 </template>

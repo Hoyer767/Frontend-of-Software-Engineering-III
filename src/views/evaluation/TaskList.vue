@@ -1,9 +1,42 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, reactive } from 'vue'
 import { Plus as PlusIcon } from '@icon-park/vue-next'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/store/taskStore'
 import { useRoute } from 'vue-router'
+import TaskCreation from "@/component/TaskCreation.vue";
+import {createRagTasks} from "@/api/rag";
+import {ElMessage} from "element-plus";
+
+const info = reactive({
+  type: 'Rag',
+  name: '',
+  description: '',
+  metrics: [],
+  prompt: ''
+})
+
+const formRef = ref()
+
+const handleSubmit = async () => {
+  if (info.type === 'Rag') {
+    try {
+      const res = await createRagTasks(info.name, info.description)
+      ElMessage.success("创建 Rag 任务成功！")
+      showForm.value = false
+      await fetchTasks()
+      tasks.value = getTasks.value
+    } catch (error) {
+      ElMessage.error('创建 Rag 任务失败')
+    }
+  }
+}
+const handleReset = () => {
+  info.type = 'Rag'
+  info.name = ''
+  info.description = ''
+  info.metrics = []
+}
 
 const route = useRoute()
 const isFilterActive = computed(() => route.name === 'Filter')
@@ -13,6 +46,12 @@ const { getTasks } = storeToRefs(store)
 const tasks = ref([])
 const showFilterMenu = ref(false)
 let closeTimer = null
+const showForm = ref(false)
+
+const toggleForm = () => {
+  handleReset()
+  showForm.value = !showForm.value
+}
 
 const cancelClose = () => {
   clearTimeout(closeTimer)
@@ -88,9 +127,66 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <button class="add-button">
-        <PlusIcon theme="filled" size="20" fill="#333" />
+      <button class="add-button" @click="toggleForm">
+        <PlusIcon theme="filled" size="20" fill="#333"/>
       </button>
+      <el-dialog
+          v-model="showForm"
+          title="任务创建"
+          width="500"
+      >
+        <div class="form-container" style="max-width: 600px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);">
+          <div class="form-row" style="margin-bottom: 20px;">
+            <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">评估类型</label>
+            <el-radio-group v-model="info.type">
+              <el-radio label="Rag" style="margin-right: 15px;">Rag评估</el-radio>
+              <el-radio label="Prompt">Prompt评估</el-radio>
+            </el-radio-group>
+          </div>
+
+          <template v-if="info.type === 'Rag'">
+            <div class="form-row" style="margin-bottom: 20px;">
+              <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">任务名称</label>
+              <el-input
+                  v-model="info.name"
+                  placeholder="请输入任务名称"
+                  style="width: 100%;"
+              ></el-input>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 20px;">
+              <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">任务描述</label>
+              <el-input
+                  type="textarea"
+                  v-model="info.description"
+                  :rows="4"
+                  placeholder="请输入任务描述"
+                  style="width: 100%;"
+              ></el-input>
+            </div>
+          </template>
+
+          <!-- Prompt Evaluation Form (shown when 'Prompt' is selected) -->
+          <template v-else>
+            <div class="form-row" style="margin-bottom: 20px;">
+              <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">Prompt内容</label>
+              <el-input
+                  v-model="info.prompt"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入 Prompt 内容"
+                  style="width: 100%;"
+              ></el-input>
+            </div>
+          </template>
+
+          <!-- Action Buttons -->
+          <div class="form-row" style="margin-top: 30px; display: flex; justify-content: flex-end;">
+            <el-button @click="handleReset" style="margin-right: 12px;">重置</el-button>
+            <el-button type="primary" @click="handleSubmit">确认</el-button>
+          </div>
+        </div>
+      </el-dialog>
     </div>
 
     <main class="content">
@@ -209,5 +305,15 @@ onMounted(async () => {
 /* 移除默认的 <br> 间距 */
 .filter-dropdown br {
   display: none;
+}
+
+.form-container {
+  max-width: 600px;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.form-label {
+  color: black;
 }
 </style>

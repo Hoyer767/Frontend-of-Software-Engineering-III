@@ -38,6 +38,7 @@ const filteredTasks = computed(() => {
         :name="item.name"
         :type="item.type"
         :status="item.status"
+        :id="item.id"
     />
   </div>
 </template>

@@ -2,6 +2,7 @@
 import router from "@/router/index.js";
 import {defineComponent} from "vue";
 import TaskItem from "@/component/TaskItem.vue";
+import TaskCreation from "@/component/TaskCreation.vue";
 
 function go() {
   console.log(sessionStorage.getItem("username"));
@@ -15,7 +16,6 @@ function go() {
   <h1>home
     </h1>
   <el-button @click="go()"></el-button>
-  <TaskItem name="nihao" type="nihao"/>
 </div>
 </template>
 <style scoped>
