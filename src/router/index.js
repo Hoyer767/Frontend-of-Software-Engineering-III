@@ -26,12 +26,29 @@ const routes = [
         children: [
             {
                 path: '',
-                redirect: 'evaluation/allTasks' // 访问 /evaluation 时自动跳到 /evaluation/allTasks
+                redirect: 'evaluation/TaskList'
             },
             {
-                path: 'allTasks',
-                name: 'AllTasks',
-                component: () => import('@/views/evaluation/TaskList.vue')
+                path: 'TaskList',
+                name: 'TaskList',
+                component: () => import('@/views/evaluation/TaskList.vue'),
+                children: [
+                    {
+                        path: '',
+                        redirect: 'evaluation/TaskList/All'
+                    },
+                    {
+                        path: 'All',
+                        name: 'All',
+                        component: () => import('@/views/evaluation/AllTasks.vue')
+                    },
+                    {
+                        path: 'Filter/:level', // 添加动态参数 :level
+                        name: 'Filter',
+                        props: true,
+                        component: () => import('@/views/evaluation/filter.vue')
+                    }
+                ]
             },
             {
                 path: 'rag',

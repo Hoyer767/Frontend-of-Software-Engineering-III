@@ -8,6 +8,7 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import * as IconPark from '@icon-park/vue-next';
+import { createPinia } from 'pinia'
 
 // 设置全局axios默认值
 axios.defaults.baseURL = 'http://localhost:8080'
@@ -24,5 +25,7 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 for (const [key, component] of Object.entries(IconPark)) {
     app.component(key, component);
 }
+
+app.use(createPinia())
 
 app.mount('#app')

@@ -5,7 +5,7 @@
         <el-text class="name"> {{userName}} </el-text>
       </div>
       <nav class="menu">
-        <router-link to="/evaluation/allTasks" class="link" active-class="active">任务列表</router-link>
+        <router-link :to="{ name: 'TaskList' }" class="link" active-class="active">任务列表</router-link>
         <router-link to="/evaluation/task2" class="link" active-class="active">任务详情</router-link>
       </nav>
     </aside>

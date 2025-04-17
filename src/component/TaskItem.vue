@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import {Delete} from "@element-plus/icons-vue";
+import {Delete} from "@icon-park/vue-next";
 
 const props = defineProps<{
   name: string;
@@ -22,7 +22,7 @@ onMounted(() => {
 <template>
   <div class="task-item">
     <el-card
-        style="width: 360px; position: relative"
+        style="width: 300px; position: relative"
         shadow="hover"
         class="card"
         :style="{ transform: `rotate(${rotation}deg)` }"
@@ -37,7 +37,7 @@ onMounted(() => {
           class="pic"
       />
       <el-text class="classification"> {{ props.type }}评估 </el-text>
-<!--      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;"/>-->
+      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;"/>
     </el-card>
   </div>
 </template>
@@ -54,7 +54,6 @@ onMounted(() => {
   color: white;
 }
 
-.status-pending { background: #FF9800; }
 .status-processing { background: #2196F3; }
 .status-completed { background: #4CAF50; }
 .status-failed { background: #F44336; }
