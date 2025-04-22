@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # frontend
 
 This template should help get you started developing with Vue 3 in Vite.
@@ -33,4 +34,4 @@ npm run build
 * echarts
 ``npm install echarts``
 * Element-plus
->>>>>>> 523c9818c0d221a548c63c201eb44f2564e9e25f
+
