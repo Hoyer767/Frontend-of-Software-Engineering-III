@@ -10,6 +10,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import * as IconPark from '@icon-park/vue-next';
 import { createPinia } from 'pinia'
 
+
 // 设置全局axios默认值
 axios.defaults.baseURL = 'http://localhost:8080'
 axios.defaults.withCredentials = true;

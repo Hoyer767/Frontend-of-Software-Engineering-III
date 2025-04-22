@@ -9,6 +9,7 @@ import {createRagTasks} from "@/api/rag";
 import {ElMessage} from "element-plus";
 import {getAllMetrics, createPromptTasks, getUserPromptTasks} from "@/api/prompt";
 
+
 const info = reactive({
   type: 'Rag',
   name: '',
@@ -30,6 +31,7 @@ const handleSubmit = async () => {
     } catch (error) {
       ElMessage.error('创建 Rag 任务失败')
     }
+
   }else{
     try {
       // 调用Prompt任务创建API，这里需要根据实际API调整
@@ -61,7 +63,8 @@ const showFilterMenu = ref(false)
 let closeTimer = null
 const showForm = ref(false)
 const metricsList = ref<string[]>([])
-const selectedMetrics = ref<string[]>([])
+const selectedMetrics = ref<number[]>([])
+
 
 const toggleForm = () => {
   handleReset()
@@ -84,7 +87,6 @@ onMounted(async () => {
   await fetchTasks()
   tasks.value = getTasks.value
 });
-
 </script>
 
 <template>
@@ -170,7 +172,6 @@ onMounted(async () => {
                   placeholder="请输入任务名称"
                   style="width: 100%;"
               ></el-input>
-
             </div>
 
             <div class="form-row" style="margin-bottom: 20px;">
@@ -185,9 +186,6 @@ onMounted(async () => {
             </div>
           </template>
 
-
-
-          <!-- Prompt Evaluation Form (shown when 'Prompt' is selected) -->
           <template v-else>
             <div class="form-row" style="margin-bottom: 20px;">
               <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">任务名称</label>
@@ -202,13 +200,12 @@ onMounted(async () => {
               <label class="form-label" style="margin-bottom: 20px;">选择待评估的 Prompt 指标</label>
               <el-select v-model="selectedMetrics" multiple placeholder="请选择指标" style="width: 100%; margin-top: 10px ; margin-bottom: -5px">
                 <el-option
-                    v-for="metric in metricsList"
-                    :key="metric"
+                    v-for="(metric, index) in metricsList"
+                    :key="index"
                     :label="metric"
-                    :value="metric"
+                    :value="index"
                 />
               </el-select>
-
             </div>
 
             <div class="form-row" style="margin-bottom: 20px;">
@@ -233,7 +230,6 @@ onMounted(async () => {
     </div>
 
     <main class="content">
-
       <router-view />
     </main>
 
@@ -389,3 +385,4 @@ onMounted(async () => {
   color: black;
 }
 </style>
+

@@ -26,7 +26,7 @@ const routes = [
         children: [
             {
                 path: '',
-                redirect: 'evaluation/TaskList'
+                redirect: '/evaluation/TaskList'
             },
             {
                 path: 'TaskList',
@@ -51,9 +51,22 @@ const routes = [
                 ]
             },
             {
-                path: 'rag',
-                name: 'RAG',
-                component: () => import('@/views/evaluation/rag/index.vue')
+                path: 'Detail',
+                name: 'Detail',
+                children: [
+                    {
+                        path: 'rag/:id',
+                        name: 'Rag',
+                        props: true,
+                        component: () => import('@/views/evaluation/rag/index.vue')
+                    },
+                    {
+                        path: 'prompt/:id',
+                        name: 'Prompt',
+                        props: true,
+                        component: () => import('@/views/evaluation/prompt/index.vue')
+                    }
+                ]
             }
         ]
     }

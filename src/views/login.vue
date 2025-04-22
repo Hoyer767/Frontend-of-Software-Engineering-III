@@ -32,7 +32,7 @@ function handleSubmit () {
         center: true,
       });
       sessionStorage.setItem("username", res.data.result.username)
-      router.push({path: "/home"});
+      router.push({path: "/evaluation"});
     }else {
       ElMessage({
         message: "用户名或密码错误",

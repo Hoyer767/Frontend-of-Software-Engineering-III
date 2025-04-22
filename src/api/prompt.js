@@ -26,7 +26,7 @@ export const createPromptTasks = async (name, des, metrics) => {
         console.log(name,des, metrics);
         const res = await axios.post(`${PROMPT_MODULE}/tasks/create`, {
             name,
-            des,
+            description: des,
             metrics,
         }, {
             headers: { 'Content-Type': 'application/json' }
@@ -51,3 +51,34 @@ export const deletePromptTaskById = async (id) => {
         throw error
     }
 }
+
+export const getPromptTaskById = async (id) => {
+    try {
+        const response = await axios.get(`${PROMPT_MODULE}/tasks/${id}`, {
+            headers: { 'Content-Type': 'application/json' }
+        })
+        console.log(response)
+        return response.data.result
+    } catch (error) {
+        console.error('获取任务详情失败', error)
+        throw error
+    }
+}
+
+export const evaluatePromptTask = async (id, prompt, expected) => {
+    try {
+        const res = await axios.post(`${PROMPT_MODULE}/tasks/${id}/evaluation`, {
+            prompt,
+            expected,
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        })
+        console.log('评估结果：', res)
+        return res.data
+    } catch (err) {
+        console.error('评估任务失败', err)
+        throw err
+    }
+}
+
+

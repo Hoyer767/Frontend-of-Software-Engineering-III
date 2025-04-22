@@ -1,0 +1,52 @@
+{
+    "questions": [
+        {
+            "question_text": "泰拉瑞亚中夜明矿的生成条件是什么？",
+            "ground_truth": ["夜明矿需要击败月亮领主后在地图两侧生成"],
+            "context": ["月亮领主是游戏最终Boss"],
+            "generated_answers": "夜明矿会随机生成在地下层"
+        },
+        {
+            "question_text": "如何召唤机械骷髅王？",
+            "ground_truth": ["使用机械骷髅头在夜晚召唤"],
+            "context": ["机械三王之一"],
+            "generated_answers": "合成机械眼球即可召唤"
+        },
+        {
+            "question_text": "叶绿矿的生长速度是多少？",
+            "ground_truth": ["每游戏刻有1/40概率扩散"],
+            "context": ["需要种植在泥块上"],
+            "generated_answers": "每分钟生长一次"
+        },
+        {
+            "question_text": "猪龙鱼公爵的掉落物包含什么？",
+            "ground_truth": ["瘟疫法杖、暴风雨法杖、猪龙鱼之翼"],
+            "context": ["困难模式Boss"],
+            "generated_answers": "只会掉落金币"
+        },
+        {
+            "question_text": "世纪之花的攻击模式有哪些？",
+            "ground_truth": ["第一阶段突进攻击，第二阶段释放孢子和小怪"],
+            "context": ["丛林神庙守护者"],
+            "generated_answers": "只会直线冲撞"
+        },
+        {
+            "question_text": "星尘柱区域的特色敌怪是什么？",
+            "ground_truth": ["星尘细胞、流云元素、银河织妖"],
+            "context": ["四柱事件之一"],
+            "generated_answers": "只有普通僵尸"
+        },
+        {
+            "question_text": "甲虫套装的防御加成是多少？",
+            "ground_truth": ["全套提供73点防御力"],
+            "context": ["由甲虫壳制作"],
+            "generated_answers": "防御力与铜套相同"
+        },
+        {
+            "question_text": "如何获得松露虫？",
+            "ground_truth": ["在发光蘑菇生物群落用虫网捕捉"],
+            "context": ["需要进入困难模式"],
+            "generated_answers": "任何地下区域都会刷新"
+        }
+    ]
+}

@@ -5,6 +5,8 @@ import {ElMessage} from "element-plus";
 import {useTaskStore} from "@/store/TaskStore";
 import {deleteRagTaskById} from "@/api/rag"
 import {deletePromptTaskById} from "@/api/prompt"
+import router from "@/router/index.js";
+
 
 const store = useTaskStore()
 const { fetchTasks } = store
@@ -42,6 +44,15 @@ const del = async () => {
   }
 }
 
+function showDetails() {
+  if (props.type === 'Rag') {
+    router.push({name:'Rag', params: { id: props.id }})
+  }
+  if (props.type === 'Prompt') {
+    router.push({name:'Prompt', params: { id: props.id }})
+  }
+}
+
 onMounted(() => {
   rotation.value = Math.floor(Math.random() * 11) - 5;
 });
@@ -54,6 +65,7 @@ onMounted(() => {
         shadow="hover"
         class="card"
         :style="{ transform: `rotate(${rotation}deg)` }"
+        @click="showDetails"
     >
       <div class="status-tag" :class="`status-completed`">
         completed
@@ -65,7 +77,7 @@ onMounted(() => {
           class="pic"
       />
       <el-text class="classification"> {{ props.type }}评估 </el-text>
-      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;" @click="del"/>
+      <delete theme="outline" size="20" class="delete" fill="#333" style="position: absolute; right: 20px; bottom: 20px;" @click.stop="del"/>
     </el-card>
   </div>
 </template>
@@ -108,4 +120,6 @@ onMounted(() => {
 .delete {
 
 }
+
 </style>
+
