@@ -21,13 +21,14 @@ export const getAllMetrics = async () => {
     }
 };
 
-export const createPromptTasks = async (name, des, metrics) => {
+export const createPromptTasks = async (name, des, metrics, custom_metrics) => {
     try {
-        console.log(name,des, metrics);
+        console.log(name,des, metrics,custom_metrics);
         const res = await axios.post(`${PROMPT_MODULE}/tasks/create`, {
             name,
             description: des,
             metrics,
+            custom_metrics,
         }, {
             headers: { 'Content-Type': 'application/json' }
         })
@@ -77,6 +78,22 @@ export const evaluatePromptTask = async (id, prompt, expected) => {
         return res.data
     } catch (err) {
         console.error('评估任务失败', err)
+        throw err
+    }
+}
+
+export const promptOptimization = async (id, prompt, expected) => {
+    try {
+        const res = await axios.post(`${PROMPT_MODULE}/tasks/${id}/evaluationoptimized`, {
+            prompt,
+            expected,
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        })
+        console.log('优化结果：', res)
+        return res.data
+    } catch (err) {
+        console.error('优化任务失败', err)
         throw err
     }
 }

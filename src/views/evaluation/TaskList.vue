@@ -9,14 +9,26 @@ import {createRagTasks} from "@/api/rag";
 import {ElMessage} from "element-plus";
 import {getAllMetrics, createPromptTasks, getUserPromptTasks} from "@/api/prompt";
 
+interface MetricItem {
+  name: string;
+  description: string;
+}
 
 const info = reactive({
   type: 'Rag',
   name: '',
   description: '',
   metrics: [],
-  prompt: ''
+  prompt: '',
+  custom_metrics: [],
+  custom_descriptions: [],
 })
+
+const formatMetrics = (descriptions) => {
+  return descriptions
+      .map((desc, index) => `${index + 1}. ${desc}`)
+      .join(" ");
+};
 
 const formRef = ref()
 
@@ -35,7 +47,10 @@ const handleSubmit = async () => {
   }else{
     try {
       // 调用Prompt任务创建API，这里需要根据实际API调整
-      await createPromptTasks(info.name, info.description, selectedMetrics.value)
+      cleanSelectedMetrics();
+      console.log(selectedMetrics.value)
+      await createPromptTasks(info.name, info.description, selectedMetrics.value, formatMetrics(customMetricDescriptions.value))
+      console.log(selectedMetrics.value)
       selectedMetrics.value = [];
       ElMessage.success("创建 Prompt 任务成功！")
       showForm.value = false
@@ -43,6 +58,7 @@ const handleSubmit = async () => {
       tasks.value = getTasks.value
     } catch (error) {
       ElMessage.error('创建 Prompt 任务失败')
+      console.log(error)
     }
   }
 }
@@ -51,6 +67,27 @@ const handleReset = () => {
   info.name = ''
   info.description = ''
   info.metrics = []
+}
+
+const cleanSelectedMetrics = () => {
+  const validNames = metricsListCopy.value.map(m => m.name);
+  console.log(validNames);
+  selectedMetrics.value = selectedMetrics.value.filter(
+      name => validNames.includes(name)
+  );
+};
+
+const handleAddMetric = () => {
+  customMetricDescriptions.value.push(customMetricDescription.value);
+  selectedMetrics.value.push(customMetricName.value)
+  metricsList.value.push({
+    name: customMetricName.value,
+    description: extractDescriptionReg(customMetricDescription.value)
+  })
+  console.log(extractDescriptionReg(customMetricDescription.value))
+  showMetricDialog.value = false
+  customMetricDescription.value = ''
+  customMetricName.value = ''
 }
 
 const route = useRoute()
@@ -62,14 +99,23 @@ const tasks = ref([])
 const showFilterMenu = ref(false)
 let closeTimer = null
 const showForm = ref(false)
-const metricsList = ref<string[]>([])
-const selectedMetrics = ref<number[]>([])
-
+const metricsList = ref<MetricItem[]>([])
+const metricsListCopy = ref<MetricItem[]>([])
+const selectedMetrics = ref<string[]>([])
+let showMetricDialog = ref<boolean>(false)
+let customMetricName = ref<string>('')
+let customMetricDescription = ref<string>('')
+let customMetricDescriptions = ref<string[]>([])
 
 const toggleForm = () => {
   handleReset()
   showForm.value = !showForm.value
 }
+
+const extractDescriptionReg = (str: string) => {
+  const match = str.match(/：(.*?)，/);
+  return match ? match[1].trim() : '';
+};
 
 const cancelClose = () => {
   clearTimeout(closeTimer)
@@ -83,7 +129,15 @@ const closeWithDelay = () => {
 
 onMounted(async () => {
   const res = await getAllMetrics();
-  metricsList.value = res.result;
+  metricsList.value = Object.entries(res.result).map(([name, description]) => ({
+    name,
+    description
+  }));
+  metricsListCopy.value = Object.entries(res.result).map(([name, description]) => ({
+    name,
+    description
+  }));
+  console.log(metricsList.value)
   await fetchTasks()
   tasks.value = getTasks.value
 });
@@ -200,10 +254,10 @@ onMounted(async () => {
               <label class="form-label" style="margin-bottom: 20px;">选择待评估的 Prompt 指标</label>
               <el-select v-model="selectedMetrics" multiple placeholder="请选择指标" style="width: 100%; margin-top: 10px ; margin-bottom: -5px">
                 <el-option
-                    v-for="(metric, index) in metricsList"
-                    :key="index"
-                    :label="metric"
-                    :value="index"
+                    v-for="metric in metricsList"
+                    :key="metric.name"
+                    :label="metric.description"
+                    :value="metric.name"
                 />
               </el-select>
             </div>
@@ -222,8 +276,44 @@ onMounted(async () => {
 
           <!-- Action Buttons -->
           <div class="form-row" style="margin-top: 30px; display: flex; justify-content: flex-end;">
+            <!-- 原按钮代码修改 -->
+            <el-button v-if="info.type === 'Prompt'" @click="showMetricDialog = true" style="margin-right: 12px;">新建评估指标</el-button>
             <el-button @click="handleReset" style="margin-right: 12px;">重置</el-button>
             <el-button type="primary" @click="handleSubmit">确认</el-button>
+
+            <!-- 新建评估指标弹窗 -->
+            <el-dialog
+                v-model="showMetricDialog"
+                title="新建评估指标"
+                width="500"
+            >
+              <div style="padding: 20px;">
+                <div class="form-row" style="margin-bottom: 20px;">
+                  <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">指标名称</label>
+                  <el-input
+                      v-model="customMetricName"
+                      placeholder="请输入指标名称"
+                      style="width: 100%;"
+                  ></el-input>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 20px;">
+                  <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500;">指标描述</label>
+                  <el-input
+                      type="textarea"
+                      v-model="customMetricDescription"
+                      :rows="3"
+                      placeholder="请输入指标描述,格式如下 --- [指标名称]:[指标意义],指标为0表示[...],指标为1表示[...]."
+                      style="width: 100%;"
+                  ></el-input>
+                </div>
+
+                <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
+                  <el-button @click="showMetricDialog = false" style="margin-right: 12px;">取消</el-button>
+                  <el-button type="primary" @click="handleAddMetric">确认</el-button>
+                </div>
+              </div>
+            </el-dialog>
           </div>
         </div>
       </el-dialog>

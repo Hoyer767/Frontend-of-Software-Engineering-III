@@ -39,10 +39,10 @@
             class="metrics-select"
         >
           <el-option
-              v-for="(metric, index) in metricsList"
-              :key="index"
-              :label="metric"
-              :value="index"
+              v-for="metric in metricsList"
+              :key="metric.name"
+              :label="metric.description"
+              :value="metric.name"
               :disabled="true"
           />
         </el-select>
@@ -57,7 +57,7 @@
         </div>
 
         <!-- 空状态 -->
-        <div v-else-if="!evaluationResult" class="empty-box">
+        <div v-else-if="!evaluationResult && !latestScore" class="empty-box">
           <el-icon :size="48" class="empty-icon"><DataBoard /></el-icon>
           <div class="empty-text">点击开始评估查看结果</div>
         </div>
@@ -65,20 +65,79 @@
         <!-- 结果展示 -->
         <div v-else class="chart-container">
           <div class="chart-switch">
-            <el-tooltip effect="dark" :content="chartType === 'bar' ? '切换折线图' : '切换柱状图'" placement="left">
-              <el-icon class="switch-icon" @click="toggleChartType">
-                <SwitchButton />
-              </el-icon>
-            </el-tooltip>
+            <div class="switch-row">
+              <el-tooltip effect="dark" :content="chartType === 'bar' ? '切换折线图' : '切换柱状图'" placement="left">
+                <el-icon class="switch-icon" @click="toggleChartType" :style="{ fontSize: '24px' }">
+                  <Switch />
+                </el-icon>
+              </el-tooltip>
+
+              <span class="chart-title">
+      {{ chartType === 'bar' ? '本轮评估分数' : '多轮评估分数' }}
+    </span>
+            </div>
           </div>
-          <div v-show="chartType === 'bar'" ref="barChartDom" style="width: 100%; height: 300px;"></div>
-          <div v-show="chartType === 'line'" ref="lineChartDom" style="width: 100%; height: 300px;"></div>
+          <div v-show="chartType === 'bar'" ref="barChartDom" style="width: 100%; height: 340px;"></div>
+          <div v-show="chartType === 'line'" ref="lineChartDom" style="width: 100%; height: 340px;"></div>
         </div>
       </div>
     </div>
     <div class="right box">
-      <!-- 右栏内容 -->
-      <el-button type="primary">right</el-button>
+      <div class="section-title">
+        <span class="title-text">Prompt优化结果</span>
+        <div class="title-decoration"></div>
+      </div>
+      <!-- 双栏展示 -->
+      <div class="optimize-row">
+        <!-- 原始Prompt -->
+        <div class="prompt-card">
+          <div class="card-header">
+            <el-icon><Document /></el-icon>
+            原始Prompt
+          </div>
+          <div class="card-content" v-if="!isEvaluating">
+            <span class="typing-text">{{ displayedOriginal }}</span>
+            <span class="typing-caret" v-show="showCaret"></span>
+          </div>
+          <div v-else class="optimize-loading">
+            <el-icon class="loading-icon" :size="18" style="margin-bottom: 5px"><Loading /></el-icon>
+            <div class="loading-text">优化中，预计需要30秒...</div>
+          </div>
+        </div>
+
+
+        <!-- 优化后Prompt -->
+        <div class="prompt-card">
+          <div class="card-header">
+            <el-icon><MagicStick /></el-icon>
+            优化后Prompt
+          </div>
+          <div class="card-content" v-if="!isEvaluating">
+            <span class="typing-text">{{ displayedOptimized }}</span>
+            <span class="typing-caret" v-show="showCaret"></span>
+          </div>
+          <div v-else class="optimize-loading">
+            <el-icon class="loading-icon" :size="18" style="margin-bottom: 5px"><Loading /></el-icon>
+            <div class="loading-text">优化中，预计需要30秒...</div>
+          </div>
+        </div>
+      </div>
+      <!-- 优化说明 -->
+      <div class="explain-card">
+        <div class="card-header">
+          <el-icon><Comment /></el-icon>
+          优化说明
+        </div>
+        <div class="card-content" v-if="!isEvaluating">
+          <span class="typing-text">{{ displayedExplanation }}</span>
+          <span class="typing-caret" v-show="showCaret"></span>
+        </div>
+        <div v-else class="optimize-loading">
+          <el-icon class="loading-icon" :size="25"><Loading /></el-icon>
+          <div class="loading-text">优化中，预计需要30秒...</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -88,16 +147,19 @@
 import {onMounted, ref, nextTick, onUnmounted} from "vue";
 import * as echarts from 'echarts';
 import {useRoute} from "vue-router";
-import {getPromptTaskById, getAllMetrics, evaluatePromptTask} from "@/api/prompt.js";
-import {ChatLineRound, EditPen} from "@element-plus/icons-vue";
+import {getPromptTaskById, getAllMetrics, evaluatePromptTask, promptOptimization} from "@/api/prompt.js";
+import {ChatLineRound, EditPen, DataAnalysis, Switch} from "@element-plus/icons-vue";
 import { SwitchButton } from '@element-plus/icons-vue';
+
+interface MetricItem {
+  name: string;
+  description: string;
+}
 
 const route = useRoute()
 const id = route.params.id
 const name = ref('')
 const description = ref('')
-const selectedMetrics = ref<number[]>([])
-const metricsList = ref<string[]>([])
 const promptText = ref<string>('');
 const expectedText = ref<string>('');
 const isEvaluating = ref(false)
@@ -106,22 +168,110 @@ const chart = ref<HTMLElement | null>(null)
 const chartType = ref<'bar' | 'line'>('bar');
 const historyResults = ref<Array<{
   timestamp: number;
-  scores: number[];
+  scores: Record<string, number>; // 改为字典格式存储
 }>>([]);
 const barChartDom = ref<HTMLElement | null>(null);
 const lineChartDom = ref<HTMLElement | null>(null);
 let barChartInstance: echarts.ECharts | null = null;
 let lineChartInstance: echarts.ECharts | null = null;
+const displayedOriginal = ref('');
+const displayedOptimized = ref('');
+const displayedExplanation = ref('');
+const showCaret = ref(true);
+const metricsList = ref<MetricItem[]>([])
+const selectedMetrics = ref<string[]>([])
+const custom_metrics = ref<string>('')
+const latestScore = ref<Record<string, number>>({});
+const drawHistory = ref<boolean>(false)
+const historyPrompts = ref<string[]>([]);
+
+// 打字机动画函数
+const typeWriter = (target: Ref<string>, text: string) => {
+  let index = 0;
+  target.value = '';
+
+  const typing = () => {
+    if (index < text.length) {
+      target.value += text.charAt(index);
+      index++;
+      setTimeout(typing, 20);
+    } else {
+      showCaret.value = false;
+    }
+  };
+
+  typing();
+};
+
+function parseAndStoreMetrics(input: string) {
+  console.log("here", input)
+
+  // 解析逻辑
+  const entries = input.match(/\d+\.\s*(.*?)(?=\s*\d+\.|$)/gs) || [];
+
+  console.log(entries)
+
+  for (const entry of entries) {
+    const cleanedEntry = entry.replace(/^\d+\.\s*/, "").trim();
+
+    // 用冒号切分，取得 metric 和描述部分
+    const colonSplit = cleanedEntry.split("：");
+    if (colonSplit.length < 2) continue;
+
+    const metricRaw = colonSplit[0].trim(); // 去除冒号前内容（metric）
+    const descriptionRaw = colonSplit.slice(1).join("：").split("，")[0].trim(); // 冒号之后第一个逗号前的描述
+
+    if (!metricRaw || !descriptionRaw) continue;
+    console.log(metricRaw)
+    console.log(descriptionRaw)
+
+    // 同步更新两个 ref
+    selectedMetrics.value.push(metricRaw);
+    console.log(selectedMetrics)
+    metricsList.value.push({
+      name: metricRaw,
+      description: descriptionRaw
+    });
+    console.log(metricsList)
+  }
+}
+
 
 onMounted(async () => {
   const res = await getPromptTaskById(id)
   console.log(res)
+  custom_metrics.value = res.custom_metrics;
   name.value = res.name
   description.value = res.description
   selectedMetrics.value = res.metrics;
   const res1 = await getAllMetrics();
-  metricsList.value = res1.result;
-  console.log(selectedMetrics);
+  metricsList.value = Object.entries(res1.result).map(([name, description]) => ({
+    name,
+    description
+  }));
+  console.log(selectedMetrics, metricsList)
+  parseAndStoreMetrics(custom_metrics.value)
+  const evaluations = res?.evaluations || [];
+  historyResults.value = evaluations.map((evaluation: any) => ({
+    timestamp: new Date(evaluation.created_at).getTime(), // 转换为时间戳
+    scores: { ...evaluation.scores } // 创建新对象避免引用问题
+  }));
+  if (evaluations.length > 0) {
+    evaluations.forEach((evaluation: any) => {
+     historyPrompts.value.push(evaluation.prompt.trim())
+    });
+    console.log(historyPrompts
+    )
+    const lastEvaluation = evaluations[evaluations.length - 1];
+    console.log(lastEvaluation)
+    latestScore.value = { ...lastEvaluation.scores };
+    promptText.value = lastEvaluation.prompt;
+    drawHistory.value = true;
+    console.log(historyResults, latestScore)
+
+    renderBarChart();
+    renderLineChart();
+  }
 })
 
 async function startEvaluation() {
@@ -129,22 +279,38 @@ async function startEvaluation() {
     isEvaluating.value = true;
     evaluationResult.value = null;
 
-    const res = await evaluatePromptTask(
+    // 清空显示内容
+    displayedOriginal.value = '';
+    displayedOptimized.value = '';
+    displayedExplanation.value = '';
+
+    const res = await promptOptimization(
         id,
         promptText.value,
         expectedText.value
     );
+    console.log(res)
 
     evaluationResult.value = res;
+    // 启动打字效果
+    typeWriter(displayedOriginal, res.result.optimization.original_prompt);
+    typeWriter(displayedOptimized, res.result.optimization.optimized_prompt);
+    typeWriter(displayedExplanation, res.result.optimization.optimization_explanation);
 
-    // 保存历史记录
     historyResults.value.push({
       timestamp: Date.now(),
-      scores: res.result.scores
+      scores: res.result.evaluation.scores
     });
 
+    console.log(historyResults.value)
+
+    // 等待DOM更新完成
     await nextTick();
-    renderChart();
+    await nextTick();
+
+    // 同时渲染两个图表
+    renderBarChart();
+    renderLineChart();
   } catch (error) {
     console.error('评估失败:', error);
   } finally {
@@ -156,16 +322,12 @@ async function startEvaluation() {
 // 修改后的切换函数
 function toggleChartType() {
   chartType.value = chartType.value === 'bar' ? 'line' : 'bar';
+  // 切换时只需要更新图表尺寸
   nextTick(() => {
-    // 优先使用已有实例
-    const existingInstance = chartType.value === 'bar'
-        ? barChartInstance
-        : lineChartInstance;
-
-    if (!existingInstance) {
-      renderChart();
-    } else {
-      existingInstance.resize();
+    if (chartType.value === 'bar' && barChartInstance) {
+      barChartInstance.resize();
+    } else if (lineChartInstance) {
+      lineChartInstance.resize();
     }
   });
 }
@@ -173,57 +335,102 @@ function toggleChartType() {
 // 绘制图表函数
 // 修改后的renderChart函数
 // 重构后的图表渲染
-function renderChart() {
-  if (!evaluationResult.value) return;
-
-  // 根据图表类型选择容器
-  const currentDom = chartType.value === 'bar' ? barChartDom.value : lineChartDom.value;
-  if (!currentDom) {
-    console.error('图表容器未找到');
+// 拆分渲染函数
+function renderBarChart(retryCount = 0) {
+  if (!barChartDom.value) {
+    if (retryCount < 5) {
+      setTimeout(() => renderBarChart(retryCount + 1), 100);
+      return;
+    }
+    console.error('柱状图容器未找到');
     return;
   }
-  // 销毁旧实例
-  const oldInstance = echarts.getInstanceByDom(currentDom);
-  if (oldInstance) oldInstance.dispose();
 
-  // 创建新实例
-  const chartInstance = echarts.init(currentDom);
-  const option = chartType.value === 'bar' ? getBarOption() : getLineOption();
-  chartInstance.setOption(option);
+  // 清理旧实例
+  let instance = echarts.getInstanceByDom(barChartDom.value);
+  if (instance) instance.dispose();
 
-  // 保存实例引用
-  if (chartType.value === 'bar') {
-    barChartInstance = chartInstance;
-  } else {
-    lineChartInstance = chartInstance;
-  }
+  instance = echarts.init(barChartDom.value);
+  instance.setOption(getBarOption());
+  barChartInstance = instance;
 
-  // 响应式调整
-  const resizeHandler = () => chartInstance.resize();
+  // 响应式处理
+  const resizeHandler = () => instance.resize();
   window.addEventListener('resize', resizeHandler);
 
-  // 清理钩子
   onUnmounted(() => {
     window.removeEventListener('resize', resizeHandler);
-    chartInstance.dispose();
-    if (chartType.value === 'bar') {
-      barChartInstance = null;
-    } else {
-      lineChartInstance = null;
+    instance?.dispose();
+  });
+}
+
+function renderLineChart(retryCount = 0) {
+  if (!lineChartDom.value) {
+    if (retryCount < 5) {
+      setTimeout(() => renderLineChart(retryCount + 1), 100);
+      return;
     }
+    console.error('折线图容器未找到');
+    return;
+  }
+
+  // 清理旧实例
+  let instance = echarts.getInstanceByDom(lineChartDom.value);
+  if (instance) instance.dispose();
+
+  instance = echarts.init(lineChartDom.value);
+  instance.setOption(getLineOption());
+  lineChartInstance = instance;
+
+  // 响应式处理
+  const resizeHandler = () => instance.resize();
+  window.addEventListener('resize', resizeHandler);
+
+  onUnmounted(() => {
+    window.removeEventListener('resize', resizeHandler);
+    instance?.dispose();
   });
 }
 
 // 柱状图配置
 function getBarOption() {
+  let metrics: string[] = [];
+  let scores: number[] = [];
+
+  if (!drawHistory.value) {
+    metrics = Object.keys(evaluationResult.value.result.evaluation.scores);
+    scores = metrics.map(metric => evaluationResult.value.result.evaluation.scores[metric]);
+  } else {
+    const rawLatestScore = JSON.parse(JSON.stringify(latestScore.value));
+    metrics = Object.keys(rawLatestScore);
+    scores = metrics.map(metric => rawLatestScore[metric]);
+    drawHistory.value = false;
+  }
+  console.log("here", metrics, scores)
   return {
+    title: {
+      text: '', // 图表标题
+      left: 'center',          // 居中对齐
+      top: 10,                 // 距离容器顶部的距离
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333'          // 可以根据主题改颜色
+      }
+    },
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => `${params[0].name}<br/>得分：${(params[0].value * 100).toFixed(1)}%`
     },
     xAxis: {
       type: 'category',
-      data: selectedMetrics.value.map(i => metricsList.value[i]),
+      data: selectedMetrics.value,
+    },
+    grid: {
+      top: 60,     // 给上面的 title 腾出空间（默认是 10 左右）
+      bottom: 40,  // 控制下边距（你也可以调大一点）
+      left: 40,
+      right: 20
     },
     yAxis: {
       type: 'value',
@@ -235,7 +442,7 @@ function getBarOption() {
       name: '评估分数',
       type: 'bar',
       barWidth: '60%',
-      data: evaluationResult.value.result.scores,
+      data: scores,
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
           { offset: 0, color: '#83bff6' },
@@ -255,24 +462,43 @@ function getBarOption() {
 
 // 折线图配置
 function getLineOption() {
+  const metrics = Object.keys(historyResults.value[0]?.scores || {});
   const xAxisData = historyResults.value.map((_, index) => `第${index + 1}次`);
-  const seriesData = selectedMetrics.value.map((metricIndex, i) => ({
-    name: metricsList.value[metricIndex],
+  const seriesData = metrics.map(metric => ({
+    name: metric,
     type: 'line',
     showSymbol: true,
-    data: historyResults.value.map(result => result.scores[i])
+    data: historyResults.value.map(result => result.scores[metric])
   }));
 
   return {
+    title: {
+      text: '', // 图表标题
+      left: 'center',          // 居中对齐
+      top: 0,                 // 距离容器顶部的距离
+      bottom: 10,
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333'          // 可以根据主题改颜色
+      }
+    },
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => {
         return params.map(p => `${p.seriesName}<br/>${p.marker} ${(p.value * 100).toFixed(1)}%`).join('<br/>');
       }
     },
+    grid: {
+      top: 30,     // 给上面的 title 腾出空间（默认是 10 左右）
+      bottom: 60,  // 控制下边距（你也可以调大一点）
+      left: 40,
+      right: 20
+    },
     xAxis: {
       type: 'category',
-      data: xAxisData
+      data: xAxisData,
+      axisLabel: { show: false }    // 不显示文字标签
     },
     yAxis: {
       type: 'value',
@@ -297,6 +523,83 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 右侧优化区域样式 */
+.optimize-row {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.prompt-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  height: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.explain-card {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  height: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.card-content {
+  height: calc(100% - 40px);
+  overflow-y: auto;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* 打字效果 */
+.typing-effect {
+  border-right: 2px solid #3498db;
+  white-space: pre-wrap;
+  animation: blinkCaret 0.75s step-end infinite;
+}
+
+@keyframes blinkCaret {
+  from, to { border-color: transparent }
+  50% { border-color: #3498db; }
+}
+
+/* 加载状态 */
+.optimize-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+}
+
+.switch-icon {
+  color: #00f5ff;
+  transition: transform 0.4s ease, color 0.4s ease;
+  font-size: 20px;
+}
+
+.switch-icon:hover {
+  transform: rotate(180deg) scale(1.1);
+  color: #00d0ff;
+  text-shadow: 0 0 8px #00f5ff;
+  cursor: pointer;
+}
+
 .result-container {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
@@ -344,6 +647,10 @@ onUnmounted(() => {
 
 .chart-container {
   height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* 让内容靠上 */
+  gap: 8px; /* 控制按钮和图表之间的间距 */
 }
 
 .select-section {
@@ -387,6 +694,23 @@ onUnmounted(() => {
       }
     }
   }
+}
+.chart-switch {
+  display: flex;
+  justify-content: center; /* 居中对齐 */
+  margin-bottom: -10px; /* 和图表间距 */
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 图标和文字之间的间距 */
+}
+
+.chart-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
 }
 
 /* 优化操作按钮 */
